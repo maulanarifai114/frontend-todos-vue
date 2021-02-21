@@ -34,9 +34,10 @@
       </div>
     </div>
     <!-- All Todos -->
-    <div v-for="(item, index) in todos" :key="index" class="w-100 box d-flex align-items-center justify-content-between mb-3">
+    <div v-if="todos.length === 0" class="w-100 box d-flex justify-content-center mb-3">Todos is Empty</div>
+    <div v-else v-for="(item, index) in todos" :key="index" class="w-100 box d-flex align-items-center justify-content-between mb-3">
       <!-- Checkbox and Task Name -->
-      <input type="text" v-if="edit === item.id" class="form-control" v-model="update.task">
+      <input @keypress.enter="updateTodo" type="text" v-if="edit === item.id" class="form-control" v-model="update.task">
       <label v-else :for="item.id" class="d-flex justify-content-center align-items-center">
         <input @change="changeCompleted(item)" :value="item.completed" :checked="item.completed === 1" class="mr-3" type="checkbox" name="check" :id="item.id">
         <h4 v-if="item.completed === 0">{{item.task}}</h4>
@@ -58,6 +59,7 @@
 
 <script>
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'Main',
@@ -107,10 +109,10 @@ export default {
         .catch((err) => console.log(err.response.data.err))
     },
     createTodo () {
-      if (this.add.labelId === 'Select Label') {
-        alert('You must select a label')
-      } else if (this.add.task === '') {
-        alert('You must create a task')
+      if (this.add.task === '') {
+        Swal.fire('Failed', 'You must create a task', 'error')
+      } else if (this.add.labelId === 'Select Label') {
+        Swal.fire('Failed', 'You must select a label', 'error')
       } else {
         const data = {
           task: this.add.task,
@@ -120,6 +122,8 @@ export default {
           .then(() => {
             this.getAllTodos()
             this.show = 0
+            this.add.task = ''
+            this.add.labelId = 'Select Label'
           })
           .catch((err) => console.log(err.response.data.err))
       }
@@ -142,22 +146,36 @@ export default {
     },
     getAllLabels () {
       axios.get(`${process.env.VUE_APP_API_URL}/labels`)
-        .then((res) => { this.labels = res.data.result })
+        .then((res) => {
+          if (res.data.result !== 'Labels is empty') {
+            this.labels = res.data.result
+          } else {
+            this.labels = []
+          }
+        })
         .catch((err) => console.log(err.response.data))
     },
     getAllTodos () {
       axios.get(`${process.env.VUE_APP_API_URL}/todos`)
-        .then((res) => { this.todos = res.data.result })
+        .then((res) => {
+          if (res.data.result !== 'Todos is empty') {
+            this.todos = res.data.result
+          } else {
+            this.todos = []
+          }
+        })
         .catch((err) => console.log(err.response.data))
     },
     showBoxTodo () {
+      this.add.task = ''
+      this.add.labelId = 'Select Label'
       this.show === 1 ? this.show = 0 : this.show = 1
     },
     logout () {
       localStorage.removeItem('token')
       localStorage.removeItem('id')
       localStorage.removeItem('username')
-      alert('Thank your for using this application')
+      Swal.fire('Success', 'Thank your for using this application', 'success')
       this.$router.push('/')
     }
   },
