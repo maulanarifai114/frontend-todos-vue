@@ -1,91 +1,82 @@
 <template>
-  <div class=" container-fluid d-flex flex-column">
-    <h1 class="mt-5">Hi, {{getUsername}}</h1>
-    <div class="row flex-fill d-flex align-items-center flex-column">
-      <div class="col-4 d-flex align-items-center flex-column">
-        <h2>Todos</h2>
-        <div class="add-box d-flex justify-content-center align-items-center">+</div>
-        <div v-for="(item, index) in todos" :key="index"  class="add-box list d-flex flex-column">
-          <div class=" d-flex mb-3">
-            <img @click="deleteTodo(item.id)" src="../assets/trash.svg" alt="icon" width="24" height="24">
-            <img v-if="edit === item.id" class="ml-3" @click="closeEditMode" src="../assets/check.svg" alt="icon" width="24" height="24">
-            <img v-else-if="edit !== item.id" class="ml-3" @click="editMode(item)" src="../assets/pen.svg" alt="icon" width="24" height="24">
-          </div>
-          <div v-if="edit !== item.id">
-            <h5>{{item.label}}</h5>
-            <h6>{{item.description}}</h6>
-          </div>
-          <select v-else v-model="selected" @change="lookSelected()">
-            <option :selected="selected === item.label" v-for="(option, index) in labels" :key="index" :value="option.label_id">{{option.label}}</option>
-          </select>
-          <input v-if="item.completed === 1" class="task completed" type="text" :value="item.task" disabled>
-          <input v-else-if="edit !== item.id" class="task" type="text" :value="item.task" disabled>
-          <input v-else class="task" type="text" :value="item.task">
-          <label :for="item.id" class="mt-3 d-flex justify-content-between align-items-center">
-            <div>Completed</div>
-            <input v-if="item.completed === 1" @change="completedTask(item.id)" type="checkbox" name="completed" :id="item.id" checked>
-            <input v-else @change="completedTask(item.id)" type="checkbox" name="completed" :id="item.id">
-          </label>
-        </div>
+  <div class=" container d-flex flex-column">
+    <div class="my-5 d-flex justify-content-between align-items-center">
+      <h1>Hi, {{getUsername}}</h1>
+      <div @click="logout" class="logout d-flex align-items-center">
+        <h2>Log out</h2>
+        <img class="ml-3" src="../assets/logout.svg" alt="icon" width="24">
       </div>
+    </div>
+    <div class="d-flex mb-4 justify-content-center">
+      <h1 class="title">Todo List</h1>
+    </div>
+    <button class="btn btn-dark mb-3" @click="showBoxTodo">+</button>
+    <!-- Box Add Task -->
+    <div v-if="show === 1" class="w-100 box d-flex align-items-center mb-3">
+      <!-- Add Task -->
+      <div class="w-50 mr-3">
+        <h3>Add Task</h3>
+        <br>
+        <input @keypress.enter="createTodo" type="text" class="form-control" v-model="add.task">
+      </div>
+      <!-- Choose Label -->
+      <div class="w-25">
+        <h3>Choose Label</h3>
+        <br>
+        <select class="custom-select" v-model="add.labelId">
+          <option disabled selected class="opt-disabled">Select Label</option>
+          <option v-for="(option, index) in labels" :key="index" :value="option.id">{{option.label}}</option>
+        </select>
+      </div>
+      <!-- Save -->
+      <div class="flex-fill h-100 d-flex justify-content-end">
+        <img @click="createTodo" src="../assets/check.svg" alt="icon" width="24">
+      </div>
+    </div>
+    <!-- All Todos -->
+    <div v-for="(item, index) in todos" :key="index" class="w-100 box d-flex align-items-center justify-content-between mb-3">
+      <!-- Checkbox and Task Name -->
+      <input type="text" v-if="edit === item.id" class="form-control" v-model="update.task">
+      <label v-else :for="item.id" class="d-flex justify-content-center align-items-center">
+        <input @change="changeCompleted(item)" :value="item.completed" :checked="item.completed === 1" class="mr-3" type="checkbox" name="check" :id="item.id">
+        <h4 v-if="item.completed === 0">{{item.task}}</h4>
+        <del v-else>{{item.task}}</del>
+      </label>
+      <!-- Edit, Trash, Label -->
+      <select v-if="edit === item.id" class="custom-select ml-3" v-model="update.label_id">
+        <option v-for="(option, index) in labels" :key="index" :value="option.id">{{option.label}}</option>
+      </select>
+      <div v-else class="d-flex align-items-center">
+        <div :style="`background:${item.color}`" class="todos-label d-flex align-items-center justify-content-center">{{item.label}}</div>
+        <img class="ml-5" @click="deleteTodo(item.id)" src="../assets/trash.svg" alt="icon" width="24">
+        <img class="ml-3" @click="editMode(item)" src="../assets/pen.svg" alt="icon" width="24">
+      </div>
+      <img v-if="edit === item.id" class="ml-3" @click="updateTodo" src="../assets/check.svg" alt="icon" width="24">
     </div>
   </div>
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'Main',
   data () {
     return {
+      show: 0,
       edit: 0,
-      selected: 0,
-      dataEdit: {},
-      labels: [
-        {
-          id: 1,
-          label: 'Very Important',
-          description: 'Must be very first and quickly',
-          color: '#FFFFFF',
-          created_at: '2021-02-19T17:23:55.000Z',
-          updated_at: '2021-02-20T06:26:27.000Z'
-        },
-        {
-          id: 2,
-          label: 'Not Important',
-          description: 'Not to be first to do',
-          color: '#FFFFFF',
-          created_at: '2021-02-19T17:26:27.000Z',
-          updated_at: '2021-02-20T05:43:51.000Z'
-        },
-        {
-          id: 3,
-          label: 'Important',
-          description: 'First thing to do',
-          color: '#FFFFFF',
-          created_at: '2021-02-20T06:32:38.000Z',
-          updated_at: '2021-02-20T06:32:38.000Z'
-        }
-      ],
-      todos: [
-        {
-          id: 1,
-          label_id: 1,
-          completed: 1,
-          task: 'Reading Novel',
-          label: 'Very Important',
-          description: 'Must be very first and quickly',
-          color: '#FFFFFF'
-        },
-        {
-          id: 2,
-          label_id: 2,
-          completed: 0,
-          task: 'Vacation to Europe',
-          label: 'Not Important',
-          description: 'Must be very first and quickly',
-          color: '#FFFFFF'
-        }
-      ]
+      labels: [],
+      todos: [],
+      add: {
+        task: '',
+        labelId: 'Select Label'
+      },
+      update: {
+        id: 0,
+        label_id: 0,
+        task: '',
+        completed: 0
+      }
     }
   },
   computed: {
@@ -94,132 +85,117 @@ export default {
     }
   },
   methods: {
-    lookSelected () {
-      // console.log(event.target.value)
-      console.log(this.selected)
-    },
-    completedTask (id) {
-      this.todos.forEach((item) => {
-        if (item.id === id) {
-          item.completed === 0 ? item.completed = 1 : item.completed = 0
-        }
-      })
-    },
-    deleteTodo (id) {
-      console.log(id)
-    },
     editMode (item) {
       this.edit = item.id
-      this.selected = item.label
-      this.dataEdit = item
-      console.log(item)
+      this.update.id = item.id
+      this.update.label_id = item.label_id
+      this.update.task = item.task
+      this.update.completed = item.completed
     },
-    closeEditMode () {
-      this.edit = 0
+    updateTodo () {
+      const data = this.update
+      axios.patch(`${process.env.VUE_APP_API_URL}/todos`, [data])
+        .then(() => {
+          this.getAllTodos()
+          this.edit = 0
+        })
+        .catch((err) => console.log(err.response.data.err))
+    },
+    deleteTodo (id) {
+      axios.delete(`${process.env.VUE_APP_API_URL}/todos`, { data: [id] })
+        .then(() => this.getAllTodos())
+        .catch((err) => console.log(err.response.data.err))
+    },
+    createTodo () {
+      if (this.add.labelId === 'Select Label') {
+        alert('You must select a label')
+      } else if (this.add.task === '') {
+        alert('You must create a task')
+      } else {
+        const data = {
+          task: this.add.task,
+          labelId: this.add.labelId
+        }
+        axios.post(`${process.env.VUE_APP_API_URL}/todos`, data)
+          .then(() => {
+            this.getAllTodos()
+            this.show = 0
+          })
+          .catch((err) => console.log(err.response.data.err))
+      }
+    },
+    changeCompleted (item) {
+      const data = {
+        id: 0,
+        label_id: 0,
+        task: '',
+        completed: 0
+      }
+      data.id = item.id
+      data.label_id = item.label_id
+      data.task = item.task
+      data.completed = item.completed === 1 ? 0 : 1
+      this.todos.forEach((item, index) => { if (item.id === data.id) { this.todos[index].completed = data.completed } })
+      axios.patch(`${process.env.VUE_APP_API_URL}/todos`, [data])
+        .then((res) => console.log(res.data.result))
+        .catch((err) => console.log(err.response.data.err))
+    },
+    getAllLabels () {
+      axios.get(`${process.env.VUE_APP_API_URL}/labels`)
+        .then((res) => { this.labels = res.data.result })
+        .catch((err) => console.log(err.response.data))
+    },
+    getAllTodos () {
+      axios.get(`${process.env.VUE_APP_API_URL}/todos`)
+        .then((res) => { this.todos = res.data.result })
+        .catch((err) => console.log(err.response.data))
+    },
+    showBoxTodo () {
+      this.show === 1 ? this.show = 0 : this.show = 1
+    },
+    logout () {
+      localStorage.removeItem('token')
+      localStorage.removeItem('id')
+      localStorage.removeItem('username')
+      alert('Thank your for using this application')
+      this.$router.push('/')
     }
+  },
+  mounted () {
+    this.getAllLabels()
+    this.getAllTodos()
   }
 }
 </script>
 
 <style lang="scss" scoped>
 
-.container-fluid {
-  height: 100vh;
-}
-
-.task {
-  padding: 5px 0;
-  font-size: 1.5rem;
-  color: black;
-  border-bottom: 1px solid black;
-}
-
-.task:focus {
-  border-bottom: 1px solid black;
-}
-
-.completed {
-  color: #c0c0c0;
-}
-
-select {
-  color: #000;
-  margin: 0 0 0.5rem 0;
-  font-size: 1.1rem;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid black;
-}
-
-select {
-  outline: 0
-}
-
-label {
-  padding: 8px;
-  background-color: rgb(209, 223, 255);
-  border-radius: 5px;
-}
-
-input:disabled {
-  border-bottom: 1px solid rgb(196, 196, 196);
-}
-
-input {
-  background-color: #fff;
-  border: 0
-}
-
-input:focus {
-  border: 0;
-  outline: 0
-}
-
-img {
-  cursor: pointer;
-}
-
-h1 {
-  font-size: 2rem;
-}
-
-h2 {
-  font-size: 1.5rem;
-  margin: 0 0 1.5rem 0
-}
-
-h3, del {
-  font-size: 1.5rem;
-}
-
-h5 {
-  color: #c0c0c0;
-  margin: 0 0 0.5rem 0;
-  font-size: 1.1rem;
-}
-
-h6 {
-  color: #c0c0c0;
-  margin: 0 0 1rem 0;
-  font-size: 0.8rem;
-}
-
-.add-box {
-  width: 100%;
-  min-height: 45px;
-  background: rgb(150, 255, 146);
-  cursor: pointer;
-  border-radius: 10px;
-  margin: 0 0 1rem 0;
-  font-size: 2rem;
-}
-
-.list {
-  font-size: 1rem;
-  background: white;
-  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
+.box {
   padding: 20px;
-  cursor: inherit;
+  border-radius: 10px;
+  background-color: rgb(220, 255, 220);
+}
+
+.title {
+  font-size: 1.5rem;
+}
+
+h2, h4, img, del, .logout {
+  cursor: pointer
+}
+
+.opt-disabled {
+  color: #dadada
+}
+
+.todos {
+  padding-left: 10px;
+}
+
+.todos-label {
+  border-radius: 5px;
+  padding: 0 10px;
+  height: 38px;
 }
 
 </style>
