@@ -8,13 +8,30 @@
       </div>
     </div>
     <div class="row">
+      <!-- Users -->
       <div class="col">
+        <!-- Title -->
         <div class="d-flex mb-4 justify-content-center">
           <h1 class="title">Users</h1>
         </div>
+        <!-- All Users -->
+        <div v-for="(item, index) in users" :key="index" class="w-100 box d-flex mb-3 justify-content-between align-items-center">
+          <input v-if="editUser === item.id" type="text" class="form-control" v-model="updateUser.username" >
+          <h3 v-else>{{item.username}}</h3>
+          <div v-if="editUser !== item.id" class="d-flex align-items-center">
+            <button @click.prevent="confirmUser(item.id)" v-if="item.confirmed === 0" class="btn btn-dark">Confirm</button>
+            <button v-else class="btn btn-secondary" disabled>Confirmed</button>
+            <img @click="deleteUser(item.id)" class="ml-3" src="../assets/trash.svg" alt="icon" width="24">
+            <img @click="editModeUser(item)" class="ml-3" src="../assets/pen.svg" alt="icon" width="24">
+          </div>
+          <div v-else class=" d-flex align-items-center">
+            <img @click="closeEditUser" class="ml-3" src="../assets/close.svg" alt="icon" width="18">
+            <img @click="updateUserNow" class="ml-3" src="../assets/check.svg" alt="icon" width="24">
+          </div>
+        </div>
       </div>
       <!-- Todos -->
-      <div class="col-6">
+      <div class="col-5">
         <div class="d-flex mb-4 justify-content-center">
           <h1 class="title">Todo List</h1>
         </div>
@@ -108,8 +125,10 @@ export default {
       showLabel: 0,
       edit: 0,
       editLabel: 0,
+      editUser: 0,
       labels: [],
       todos: [],
+      users: [],
       add: {
         task: '',
         labelId: 'Select Label'
@@ -118,6 +137,11 @@ export default {
         label: '',
         description: '',
         color: '#FFFFFF'
+      },
+      updateUser: {
+        id: 0,
+        username: '',
+        password: ''
       },
       updateLabel: {
         id: 0,
@@ -139,6 +163,22 @@ export default {
     }
   },
   methods: {
+    confirmUser (id) {
+      axios.patch(`${process.env.VUE_APP_API_URL}/admin/confirm`, [id])
+        .then(() => {
+          this.getAllUsers()
+        })
+        .catch((err) => console.log(err.response.data.err))
+    },
+    updateUserNow () {
+      const data = this.updateUser
+      axios.patch(`${process.env.VUE_APP_API_URL}/admin/user`, data)
+        .then(() => {
+          this.getAllUsers()
+          this.editUser = 0
+        })
+        .catch((err) => console.log(err.response.data.err))
+    },
     updateLabelNow () {
       const data = this.updateLabel
       axios.patch(`${process.env.VUE_APP_API_URL}/labels`, data)
@@ -146,6 +186,11 @@ export default {
           this.getAllLabels()
           this.editLabel = 0
         })
+        .catch((err) => console.log(err.response.data.err))
+    },
+    deleteUser (id) {
+      axios.delete(`${process.env.VUE_APP_API_URL}/admin`, { data: [id] })
+        .then(() => this.getAllUsers())
         .catch((err) => console.log(err.response.data.err))
     },
     deleteLabel (id) {
@@ -164,6 +209,16 @@ export default {
           .then(() => this.getAllLabels(), this.showLabel = 0)
           .catch((err) => console.log(err.response.data.err))
       }
+    },
+    editModeUser (item) {
+      this.editUser = item.id
+      this.updateUser.id = item.id
+      this.updateUser.username = item.username
+    },
+    closeEditUser () {
+      this.editUser = 0
+      this.updateUser.id = 0
+      this.updateUser.username = ''
     },
     editModeLabel (item) {
       this.editLabel = item.id
@@ -251,6 +306,17 @@ export default {
         })
         .catch((err) => console.log(err.response.data))
     },
+    getAllUsers () {
+      axios.get(`${process.env.VUE_APP_API_URL}/admin`)
+        .then((res) => {
+          if (res.data.result !== 'Users is empty') {
+            this.users = res.data.result
+          } else {
+            this.users = []
+          }
+        })
+        .catch((err) => console.log(err.response.data))
+    },
     showBoxTodo () {
       this.add.task = ''
       this.add.labelId = 'Select Label'
@@ -273,6 +339,7 @@ export default {
   mounted () {
     this.getAllLabels()
     this.getAllTodos()
+    this.getAllUsers()
   }
 }
 </script>
