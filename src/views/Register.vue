@@ -22,6 +22,7 @@
 
 <script>
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'Login',
@@ -43,9 +44,9 @@ export default {
       axios.post(`${process.env.VUE_APP_API_URL}/auth/register`, data)
         .then(() => {
           this.$router.push('/')
-          alert('Wait until your account confirmed')
+          Swal.fire('Success', 'Wait until your account confirmed', 'success')
         })
-        .catch((err) => alert(err.response.data.err))
+        .catch((err) => Swal.fire('Failed', err.response.data.err, 'error'))
     }
   }
 }

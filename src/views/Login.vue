@@ -22,6 +22,7 @@
 
 <script>
 import axios from 'axios'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'Login',
@@ -54,7 +55,7 @@ export default {
             this.$router.push('/main')
           }
         })
-        .catch((err) => alert(err.response.data.err))
+        .catch((err) => Swal.fire('Failed', err.response.data.err, 'error'))
     }
   }
 }
